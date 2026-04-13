@@ -1,10 +1,10 @@
-CPS Lab — Official Documentation
+# CPS Lab — Official Documentation
 By: Pixlect Studios Official
 
-What is CPS Lab?
+## What is CPS Lab?
 CPS Lab is a real-time click speed testing platform built and owned by Pixlect Studios Official. It's not just a click counter — it's a full competitive platform where players can test their speed, battle friends, chat live, and climb a global leaderboard. All in one place.
 
-How to Use
+## How to Use
 1. Set Your Name
 Type your username in the name field at the top left. This is required to submit scores. Numbers and symbols are allowed. Rank names are protected and cannot be used by regular users.
 2. Pick Your Mode
@@ -21,7 +21,7 @@ The timer starts the moment you first click/slam/scroll. Keep going until time r
 5. See Your Results
 After the test you'll see your score, a grade, your personal best, and a roast. You can then choose to submit your score to the live leaderboard or skip.
 
-Features
+## Features
 🏆 Live Leaderboard
 All submitted scores are stored in real time. Anyone who opens the page sees the full leaderboard instantly. Sorted by highest score. Filter by mode. React to scores with 🔥 😂 👏.
 👑 Hall of Fame
@@ -61,9 +61,10 @@ Country detection — no permission needed, detected from timezone
 Personal history graph — track how your CPS improves over time
 
 
-Copyright Notice
+## Copyright Notice
 © 2026 Pixlect Studios Official. All rights reserved.
 © 2026 CPS LAB [By: Pixlect studios official] all rights reserved.
+© 2026 DXB_Gamer [Owner of code] all rights reserevd
 CPS Lab is an original product developed and owned by Pixlect Studios Official. The design, code, systems, rank structure, brand identity, and all associated intellectual property are the exclusive property of Pixlect Studios Official.
 Unauthorized copying, reproduction, redistribution, modification, or commercial use of any part of this platform — in whole or in part — without prior written permission from Pixlect Studios Official is strictly prohibited.
 CPS Lab™ — By Pixlect Studios Official
