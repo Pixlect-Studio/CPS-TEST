@@ -403,6 +403,9 @@ body.helper-mode .erase-btn { display: none !important; }
   border: 1px solid var(--b2);
 }
 .rtab:hover::after { opacity: 1; }
+
+#main-pwd-input { color: var(--tx) !important; }
+#main-pwd-input::placeholder { color: var(--muted); }
 </style>
 </head>
 <body>
@@ -433,6 +436,13 @@ body.helper-mode .erase-btn { display: none !important; }
         <option value="10">10s</option>
         <option value="15">15s</option>
       </select>
+    </div>
+
+    <!-- Login row -->
+    <div class="controls-row" id="pwd-row" style="gap:8px;">
+      <input type="password" class="name-in" id="main-pwd-input" placeholder="Password (optional — to save your username)" maxlength="40" style="flex:1;">
+      <button id="login-btn" onclick="handleMainLogin()" style="background:var(--blue);border:none;color:#fff;font-family:'DM Mono',monospace;font-size:12px;padding:9px 16px;border-radius:6px;cursor:pointer;white-space:nowrap;transition:background 0.15s;" onmouseover="this.style.background='var(--blue2)'" onmouseout="this.style.background='var(--blue)'">CONTINUE</button>
+      <div id="login-status" style="font-size:11px;font-family:'DM Mono',monospace;color:var(--muted);align-self:center;white-space:nowrap;"></div>
     </div>
 
     <div class="mode-tabs">
@@ -589,11 +599,16 @@ body.helper-mode .erase-btn { display: none !important; }
       </div>
 
     </div>
-  </div>
 
     <!-- HALL OF FAME -->
     <div class="rpane" id="rpane-hof">
-      <div class="lb-top"><div class="lb-title">👑 HALL OF FAME</div><div class="lb-cnt">top 10 all-time</div></div>
+      <div class="lb-top">
+        <div class="lb-title">👑 HALL OF FAME</div>
+        <div class="lb-meta">
+          <div class="lb-cnt">top 10 all-time</div>
+          <button class="erase-btn" id="erase-hof-btn" onclick="adminClearHof()">🗑 ERASE HOF</button>
+        </div>
+      </div>
       <div class="lb-hdrs"><div class="lb-hdr">#</div><div class="lb-hdr">Player</div><div class="lb-hdr">Score</div><div class="lb-hdr">Mode</div></div>
       <div class="lb-list" id="hof-list"><div class="lb-empty"><div class="lb-empty-icon">👑</div><div class="lb-empty-txt">loading…</div></div></div>
     </div>
@@ -629,7 +644,13 @@ body.helper-mode .erase-btn { display: none !important; }
 
     <!-- GROUP CHATS -->
     <div class="rpane" id="rpane-groups">
-      <div class="lb-top"><div class="lb-title">💬 GROUPS</div><div class="lb-cnt" id="groups-cnt">public & private</div></div>
+      <div class="lb-top">
+        <div class="lb-title">💬 GROUPS</div>
+        <div class="lb-meta">
+          <div class="lb-cnt" id="groups-cnt">public & private</div>
+          <button class="erase-btn" id="erase-groups-btn" onclick="adminClearGroups()">🗑 ERASE GROUPS</button>
+        </div>
+      </div>
       <!-- Group list OR group chat view -->
       <div id="group-list-view" style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
         <div style="padding:8px 1.2rem;border-bottom:1px solid var(--b1);display:flex;gap:6px;flex-shrink:0;">
@@ -683,6 +704,7 @@ body.helper-mode .erase-btn { display: none !important; }
       </div>
     </div>
 
+  </div>
 </main>
 
 <!-- TOAST -->
@@ -1606,6 +1628,34 @@ async function adminClearBoard() {
   if (!confirm('Clear ALL scores for everyone? Cannot be undone.')) return;
   try { await fbDelete('scores'); scores={}; renderLb(); showToast('Leaderboard cleared.','var(--orange)'); }
   catch(e) { showToast('Clear failed.'); }
+}
+
+async function adminClearHof() {
+  if (!['admin','owner'].includes(myRank)) { showToast('Only Admin or Owner can clear the Hall of Fame.'); return; }
+  if (!confirm('Clear the ENTIRE Hall of Fame? This erases all-time records and cannot be undone.')) return;
+  try {
+    await fbDelete('halloffame');
+    document.getElementById('hof-list').innerHTML = '<div class="lb-empty"><div class="lb-empty-icon">👑</div><div class="lb-empty-txt">no records yet</div></div>';
+    showToast('Hall of Fame cleared.', 'var(--orange)');
+  } catch(e) { showToast('Clear failed.'); }
+}
+
+async function adminClearGroups() {
+  if (!['admin','owner'].includes(myRank)) { showToast('Only Admin or Owner can clear all groups.'); return; }
+  if (!confirm('Delete ALL group chats and their messages for everyone? This cannot be undone.')) return;
+  try {
+    const data = await fbGet('groups');
+    if (data) {
+      for (const id of Object.keys(data)) {
+        await fbDelete('groups/' + id);
+        await fbDelete('groupmsgs/' + id);
+      }
+    }
+    myGroups = [];
+    localStorage.setItem('mygroups', JSON.stringify(myGroups));
+    document.getElementById('groups-list').innerHTML = '<div class="lb-empty"><div class="lb-empty-icon">💬</div><div class="lb-empty-txt">no groups yet — create one!</div></div>';
+    showToast('All groups cleared.', 'var(--orange)');
+  } catch(e) { showToast('Clear failed.'); }
 }
 async function adminClearChat() {
   if (!confirm('Clear ALL chat messages? Cannot be undone.')) return;
@@ -2991,6 +3041,93 @@ function setTabUnread(tabId, hasUnread) {
 }
 
 // Unread detection happens inside loadChat / loadGcMsgs directly
+
+
+// ── MAIN LOGIN / REGISTER ─────────────────────────────────────────────────────
+let loggedIn = false;
+
+async function handleMainLogin() {
+  const name = nameIn.value.trim();
+  const pwd  = document.getElementById('main-pwd-input').value.trim();
+  const stat = document.getElementById('login-status');
+  const btn  = document.getElementById('login-btn');
+
+  if (!name) { showToast('Enter your username first!'); return; }
+  if (!pwd || pwd.length < 4) { showToast('Password must be at least 4 characters.'); return; }
+  if (myRank) { showToast('Ranked users cannot use password login.'); return; }
+
+  btn.disabled = true; btn.textContent = '...';
+  const key = btoa(name.toLowerCase()).replace(/[^a-zA-Z0-9]/g,'');
+
+  try {
+    const acc = await fbGet('accounts/' + key);
+
+    if (acc) {
+      // Account exists — try to login
+      const hash = await simpleHash(name.toLowerCase() + pwd);
+      if (acc.hash === hash) {
+        // Correct password — log in
+        myId = acc.uid || myId;
+        loggedIn = true;
+        nameIn.disabled = true;
+        document.getElementById('main-pwd-input').disabled = true;
+        btn.textContent = '✓ LOGGED IN';
+        btn.style.background = 'var(--green)';
+        stat.textContent = 'welcome back, ' + name + '!';
+        stat.style.color = 'var(--green)';
+        showToast('Welcome back, ' + name + '! 👋', 'var(--green)');
+        // Reload scores with correct uid
+        loadScores();
+      } else {
+        // Wrong password
+        stat.textContent = 'wrong password';
+        stat.style.color = 'var(--red)';
+        document.getElementById('main-pwd-input').style.borderColor = 'var(--red)';
+        setTimeout(() => {
+          document.getElementById('main-pwd-input').style.borderColor = '';
+          stat.textContent = '';
+        }, 2000);
+        btn.textContent = 'CONTINUE';
+        btn.disabled = false;
+      }
+    } else {
+      // No account — register this username + password
+      const hash = await simpleHash(name.toLowerCase() + pwd);
+      await fetch(FB + '/accounts/' + key + '.json', {
+        method: 'PUT',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ name, hash, uid: myId, ts: Date.now() })
+      });
+      loggedIn = true;
+      nameIn.disabled = true;
+      document.getElementById('main-pwd-input').disabled = true;
+      btn.textContent = '✓ REGISTERED';
+      btn.style.background = 'var(--green)';
+      stat.textContent = name + ' is now yours!';
+      stat.style.color = 'var(--green)';
+      showToast('Username "' + name + '" registered! 🎉', 'var(--green)');
+    }
+  } catch(e) {
+    showToast('Login failed — try again.');
+    btn.textContent = 'CONTINUE';
+    btn.disabled = false;
+  }
+}
+
+// Allow logout
+function logoutAccount() {
+  loggedIn = false;
+  nameIn.disabled = false;
+  nameIn.value = '';
+  document.getElementById('main-pwd-input').disabled = false;
+  document.getElementById('main-pwd-input').value = '';
+  const btn = document.getElementById('login-btn');
+  btn.textContent = 'CONTINUE';
+  btn.style.background = 'var(--blue)';
+  btn.disabled = false;
+  document.getElementById('login-status').textContent = '';
+  showToast('Logged out.');
+}
 
 // ── BOOT ─────────────────────────────────────────────────────────────────────
 DURATION=+durSel.value; resetDisplay();
