@@ -444,6 +444,7 @@ body.helper-mode .erase-btn { display: none !important; }
       <button id="login-btn" onclick="handleMainLogin()" style="background:var(--blue);border:none;color:#fff;font-family:'DM Mono',monospace;font-size:12px;padding:9px 16px;border-radius:6px;cursor:pointer;white-space:nowrap;transition:background 0.15s;" onmouseover="this.style.background='var(--blue2)'" onmouseout="this.style.background='var(--blue)'">CONTINUE</button>
       <div id="login-status" style="font-size:11px;font-family:'DM Mono',monospace;color:var(--muted);align-self:center;white-space:nowrap;"></div>
     </div>
+    <div style="font-size:10px;color:var(--muted2);font-family:'DM Mono',monospace;margin-top:-4px;margin-bottom:2px;">🔒 solo testing is free — account needed only for chat, friends, groups &amp; DMs</div>
 
     <div class="mode-tabs">
       <div class="mode-tab active" data-mode="click" onclick="setMode('click')">
@@ -647,19 +648,22 @@ body.helper-mode .erase-btn { display: none !important; }
       <div class="lb-top">
         <div class="lb-title">💬 GROUPS</div>
         <div class="lb-meta">
-          <div class="lb-cnt" id="groups-cnt">public & private</div>
+          <div class="lb-cnt" id="groups-cnt">private only</div>
           <button class="erase-btn" id="erase-groups-btn" onclick="adminClearGroups()">🗑 ERASE GROUPS</button>
         </div>
       </div>
       <!-- Group list OR group chat view -->
       <div id="group-list-view" style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
-        <div style="padding:8px 1.2rem;border-bottom:1px solid var(--b1);display:flex;gap:6px;flex-shrink:0;">
-          <button class="btn primary" style="flex:1;font-size:12px;padding:7px;" onclick="showCreateGroup()">+ Create Group</button>
-          <input id="group-invite-in" class="chat-in" placeholder="invite code…" style="flex:1;font-size:12px;" onkeydown="if(event.key==='Enter')joinByInvite()">
-          <button class="chat-send" onclick="joinByInvite()" title="Join with invite code">→</button>
+        <div style="padding:8px 1.2rem;border-bottom:1px solid var(--b1);display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
+          <button class="btn primary" style="width:100%;font-size:12px;padding:7px;" onclick="showCreateGroup()">+ Create Private Group</button>
+          <div style="display:flex;gap:6px;">
+            <input id="join-group-name" class="chat-in" placeholder="group name…" style="flex:1;font-size:12px;">
+            <input id="join-group-pwd" type="password" class="chat-in" placeholder="password…" style="flex:1;font-size:12px;" onkeydown="if(event.key==='Enter')joinGroupByPassword()">
+            <button class="chat-send" onclick="joinGroupByPassword()" title="Join group">→</button>
+          </div>
         </div>
         <div class="lb-list" id="groups-list" style="flex:1;">
-          <div class="lb-empty"><div class="lb-empty-icon">💬</div><div class="lb-empty-txt">no groups yet</div></div>
+          <div class="lb-empty"><div class="lb-empty-icon">🔒</div><div class="lb-empty-txt">no groups yet — every group is private</div></div>
         </div>
       </div>
       <!-- Group chat view -->
@@ -668,7 +672,7 @@ body.helper-mode .erase-btn { display: none !important; }
           <button onclick="closeGroup()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;">←</button>
           <div id="gc-name" style="font-size:13px;font-weight:500;color:var(--tx);font-family:'DM Mono',monospace;"></div>
           <div id="gc-badge" style="font-size:9px;padding:2px 8px;border-radius:10px;font-family:'DM Mono',monospace;"></div>
-          <button id="gc-invite-btn" onclick="copyInviteCode()" style="margin-left:auto;background:none;border:1px solid var(--b2);color:var(--muted);font-size:10px;padding:3px 8px;border-radius:4px;cursor:pointer;font-family:'DM Mono',monospace;" title="Copy invite link">🔗 invite</button>
+          <button id="gc-invite-btn" onclick="copyGroupInviteInfo()" style="margin-left:auto;background:none;border:1px solid var(--b2);color:var(--muted);font-size:10px;padding:3px 8px;border-radius:4px;cursor:pointer;font-family:'DM Mono',monospace;" title="Copy group name to share">🔒 share name</button>
         </div>
         <div class="chat-msgs" id="gc-msgs" style="flex:1;"></div>
         <div class="chat-input-row">
@@ -711,6 +715,36 @@ body.helper-mode .erase-btn { display: none !important; }
 <div class="toast" id="toast">
   <span id="toast-msg"></span>
   <span class="toast-x" onclick="hideToast()">✕</span>
+</div>
+
+<!-- CREATE GROUP MODAL -->
+<div class="modal-bg" id="modal-create-group" onclick="if(event.target===this)closeCreateGroupModal()">
+  <div class="modal">
+    <div class="modal-title">🔒 CREATE GROUP</div>
+    <div class="modal-sub">name your group and set a password</div>
+    <input class="modal-in" id="cg-name" type="text" placeholder="group name…" maxlength="20" autocomplete="off">
+    <input class="modal-in" id="cg-pwd" type="password" placeholder="password (min 4 chars)…" maxlength="40" autocomplete="off">
+    <input class="modal-in" id="cg-pwd2" type="password" placeholder="confirm password…" maxlength="40" autocomplete="off" onkeydown="if(event.key==='Enter')submitCreateGroup()">
+    <div class="modal-err" id="cg-err"></div>
+    <div class="modal-btns">
+      <button class="btn ghost" onclick="closeCreateGroupModal()">cancel</button>
+      <button class="btn primary" onclick="submitCreateGroup()">CREATE</button>
+    </div>
+  </div>
+</div>
+
+<!-- GROUP PASSWORD MODAL (join existing / re-enter to open) -->
+<div class="modal-bg" id="modal-group-pwd" onclick="if(event.target===this)closeGroupPwdModal()">
+  <div class="modal">
+    <div class="modal-title">🔒 PASSWORD REQUIRED</div>
+    <div class="modal-sub" id="gpwd-sub">enter the group password</div>
+    <input class="modal-in" id="gpwd-input" type="password" placeholder="password…" maxlength="40" autocomplete="off" onkeydown="if(event.key==='Enter')submitGroupPwd()">
+    <div class="modal-err" id="gpwd-err"></div>
+    <div class="modal-btns">
+      <button class="btn ghost" onclick="closeGroupPwdModal()">cancel</button>
+      <button class="btn primary" onclick="submitGroupPwd()">ENTER</button>
+    </div>
+  </div>
 </div>
 
 <!-- ADMIN MODAL -->
@@ -1150,6 +1184,7 @@ async function sendChat() {
   if (!txt) return;
   const n=nameIn.value.trim();
   if (!n) { showToast('Enter your name to chat!'); return; }
+  if (!myRank && !requireLogin('public chat')) return;
 
   // Rank commands — never shown in chat
   if (myRank && txt.startsWith('/')) {
@@ -2358,6 +2393,7 @@ function renderProfile() {
 let myFriends = JSON.parse(localStorage.getItem('friends')||'{}'); // {uid: {name,flag}}
 
 async function sendFriendReq() {
+  if (!requireLogin('the friends system')) return;
   const search = document.getElementById('friend-search').value.trim();
   if (!search) return;
   const myName = getName();
@@ -2422,6 +2458,7 @@ async function declineFriend(key) {
 // renderFriends defined in DM/groups section below
 
 async function challengeFriend(uid, name) {
+  if (!requireLogin('challenging friends')) return;
   const active = await fbGet('activenames').catch(()=>null);
   if (!active || !active[uid] || Date.now()-active[uid].ts > 120000) { showToast(`${name} is offline.`); return; }
   // Send challenge notification
@@ -2696,6 +2733,7 @@ function dmKey(uid1, uid2) {
 }
 
 async function openDm(uid, name, flag) {
+  if (!requireLogin('private messages')) return;
   activeDmUid = uid;
   activeDmName = name;
   dmLastCount = 0;
@@ -2746,6 +2784,7 @@ async function loadDmMsgs() {
 }
 
 async function sendDm() {
+  if (!requireLogin('private messages')) return;
   const inp = document.getElementById('dm-input');
   const txt = inp.value.trim();
   if (!txt || !activeDmUid) return;
@@ -2798,114 +2837,178 @@ let activeGroupId = null;
 let gcPollTimer = null;
 let gcLastCount = 0;
 
-function genInviteCode() {
-  return Math.random().toString(36).slice(2,8).toUpperCase();
-}
-
+// ── CREATE GROUP MODAL ────────────────────────────────────────────────────────
 function showCreateGroup() {
-  const name = prompt('Group name (max 20 chars):');
-  if (!name || !name.trim()) return;
-  const isPrivate = confirm('Private group? OK = Private with invite code, Cancel = Public');
-  createGroup(name.trim().slice(0,20), isPrivate);
+  if (!requireLogin('creating group chats')) return;
+  document.getElementById('cg-name').value = '';
+  document.getElementById('cg-pwd').value = '';
+  document.getElementById('cg-pwd2').value = '';
+  document.getElementById('cg-err').textContent = '';
+  document.getElementById('modal-create-group').classList.add('show');
+  setTimeout(() => document.getElementById('cg-name').focus(), 100);
 }
 
-async function createGroup(name, isPrivate) {
+function closeCreateGroupModal() {
+  document.getElementById('modal-create-group').classList.remove('show');
+}
+
+async function submitCreateGroup() {
+  const name = document.getElementById('cg-name').value.trim();
+  const pwd  = document.getElementById('cg-pwd').value.trim();
+  const pwd2 = document.getElementById('cg-pwd2').value.trim();
+  const err  = document.getElementById('cg-err');
+
+  if (!name) { err.textContent = 'Enter a group name.'; return; }
+  if (pwd.length < 4) { err.textContent = 'Password must be at least 4 characters.'; return; }
+  if (pwd !== pwd2) { err.textContent = 'Passwords do not match.'; return; }
+
+  err.textContent = '';
+  await createGroup(name.slice(0,20), pwd);
+  closeCreateGroupModal();
+}
+
+async function createGroup(name, password) {
   const myName = getName();
   if (!myName) { showToast('Enter your name first!'); return; }
-  const inviteCode = isPrivate ? genInviteCode() : null;
+  const pwdHash = await simpleHash('group_' + name.toLowerCase() + password);
   try {
+    // Block duplicate group names
+    const existing = await fbGet('groups');
+    if (existing && Object.values(existing).some(g => g.name.toLowerCase() === name.toLowerCase())) {
+      document.getElementById('cg-err').textContent = 'A group with that name already exists.';
+      document.getElementById('modal-create-group').classList.add('show');
+      return;
+    }
     const res = await fbPush('groups', {
-      name, isPrivate, inviteCode, owner: myId, ownerName: myName,
+      name, isPrivate: true, pwdHash, owner: myId, ownerName: myName,
       members: {[myId]: {name: myName, flag: myCountry.flag, joinedAt: Date.now()}},
       createdAt: Date.now(), msgCount: 0
     });
-    const group = {id: res.name, name, isPrivate, inviteCode, owner: myId};
+    const group = {id: res.name, name, isPrivate: true, owner: myId};
     myGroups.push(group);
     localStorage.setItem('mygroups', JSON.stringify(myGroups));
-    showToast(`Group "${name}" created!`, 'var(--green)');
-    if (isPrivate && inviteCode) {
-      showToast(`Invite code: ${inviteCode} (copied!)`, 'var(--orange)');
-      navigator.clipboard.writeText(inviteCode).catch(()=>{});
-    }
+    showToast(`Private group "${name}" created! Share the name + password with friends.`, 'var(--green)');
     openGroupChat(group);
   } catch(e){ showToast('Failed to create group.'); }
 }
 
-async function joinByInvite() {
-  const code = document.getElementById('group-invite-in').value.trim().toUpperCase();
-  if (!code) return;
+async function joinGroupByPassword() {
+  if (!requireLogin('joining group chats')) return;
+  const name = document.getElementById('join-group-name').value.trim();
+  const pwd  = document.getElementById('join-group-pwd').value.trim();
+  if (!name || !pwd) { showToast('Enter both group name and password.'); return; }
   const myName = getName();
   if (!myName) { showToast('Enter your name first!'); return; }
   try {
     const data = await fbGet('groups');
-    if (!data) { showToast('Invalid invite code.'); return; }
-    const entry = Object.entries(data).find(([k,v]) => v.inviteCode === code);
-    if (!entry) { showToast('Invalid invite code.'); return; }
+    if (!data) { showToast('No group found with that name.'); return; }
+    const entry = Object.entries(data).find(([k,v]) => v.name.toLowerCase() === name.toLowerCase());
+    if (!entry) { showToast('No group found with that name.'); return; }
     const [id, group] = entry;
+
+    const hash = await simpleHash('group_' + group.name.toLowerCase() + pwd);
+    if (hash !== group.pwdHash) {
+      showToast('Incorrect group password.');
+      return;
+    }
+
     // Add member
     await fetch(`${FB}/groups/${id}/members/${myId}.json`, {
       method:'PUT', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({name:myName, flag:myCountry.flag, joinedAt:Date.now()})
     });
-    const g = {id, name:group.name, isPrivate:group.isPrivate, inviteCode:group.inviteCode, owner:group.owner};
+    const g = {id, name:group.name, isPrivate:true, owner:group.owner};
     if (!myGroups.find(mg=>mg.id===id)) {
       myGroups.push(g);
       localStorage.setItem('mygroups', JSON.stringify(myGroups));
     }
-    document.getElementById('group-invite-in').value='';
+    document.getElementById('join-group-name').value='';
+    document.getElementById('join-group-pwd').value='';
     showToast(`Joined "${group.name}"!`, 'var(--green)');
     openGroupChat(g);
   } catch(e){ showToast('Failed to join.'); }
 }
 
+function copyGroupInviteInfo() {
+  // No invite codes anymore — let the owner share the group name to use with password
+  const gName = document.getElementById('gc-name').textContent;
+  navigator.clipboard.writeText(gName).then(()=>showToast(`Group name "${gName}" copied. Share it + your password.`,'var(--green)')).catch(()=>showToast(`Group name: ${gName}`,'var(--green)'));
+}
+
 async function renderGroups() {
   const box = document.getElementById('groups-list');
   if (!box) return;
-  // Fetch public groups + my groups
-  try {
-    const data = await fbGet('groups');
-    const allGroups = data ? Object.entries(data) : [];
-    const publicGroups = allGroups.filter(([k,v]) => !v.isPrivate);
-    const myGroupIds = myGroups.map(g=>g.id);
-    // Show my groups first, then public
-    const toShow = [
-      ...myGroups.map(g => ({...g, isMine:true})),
-      ...publicGroups.filter(([k])=>!myGroupIds.includes(k)).map(([k,v])=>({id:k,...v,isMine:false}))
-    ];
-    if (!toShow.length) { box.innerHTML='<div class="lb-empty"><div class="lb-empty-icon">💬</div><div class="lb-empty-txt">no groups yet — create one!</div></div>'; return; }
-    box.innerHTML = '';
-    toShow.forEach(g => {
-      const isMember = myGroupIds.includes(g.id);
-      const row = document.createElement('div');
-      row.className = 'lb-row';
-      row.style.cursor = 'pointer';
-      row.innerHTML = `
-        <div style="font-size:18px;">${g.isPrivate?'🔒':'🌐'}</div>
-        <div class="lb-name-col">
-          <div class="lb-name">${esc(g.name)}</div>
-          <div style="font-size:9px;color:var(--muted);font-family:'DM Mono',monospace;">${isMember?'member':'click to join'} · ${g.isPrivate?'private':'public'}</div>
-        </div>
-        <div style="font-size:10px;color:var(--muted);">${isMember?'▶':'join'}</div>`;
-      row.onclick = () => handleGroupClick(g.id, g.name, g.isPrivate||false, g.inviteCode||'', g.owner||'');
-      box.appendChild(row);
-    });
-  } catch(e){ box.innerHTML='<div class="lb-empty"><div class="lb-empty-txt">failed to load</div></div>'; }
+  // Only show groups you are ALREADY a verified member of — never list other private groups
+  if (!myGroups.length) {
+    box.innerHTML = '<div class="lb-empty"><div class="lb-empty-icon">🔒</div><div class="lb-empty-txt">no groups yet — every group is private</div></div>';
+    return;
+  }
+  box.innerHTML = '';
+  myGroups.forEach(g => {
+    const row = document.createElement('div');
+    row.className = 'lb-row';
+    row.style.cursor = 'pointer';
+    row.innerHTML = `
+      <div style="font-size:18px;">🔒</div>
+      <div class="lb-name-col">
+        <div class="lb-name">${esc(g.name)}</div>
+        <div style="font-size:9px;color:var(--muted);font-family:'DM Mono',monospace;">member · private</div>
+      </div>
+      <div style="font-size:10px;color:var(--muted);">▶</div>`;
+    row.onclick = () => requestGroupAccess(g);
+    box.appendChild(row);
+  });
 }
 
-async function handleGroupClick(id, name, isPrivate, inviteCode, owner) {
-  const isMember = myGroups.find(g=>g.id===id);
-  if (isMember) {
-    openGroupChat({id,name,isPrivate,inviteCode,owner});
-  } else if (!isPrivate) {
-    // Auto-join public group
-    const myName = getName();
-    if (!myName) { showToast('Enter your name first!'); return; }
-    await fetch(`${FB}/groups/${id}/members/${myId}.json`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:myName,flag:myCountry.flag,joinedAt:Date.now()})});
-    myGroups.push({id,name,isPrivate,inviteCode,owner});
-    localStorage.setItem('mygroups', JSON.stringify(myGroups));
-    openGroupChat({id,name,isPrivate,inviteCode,owner});
-  } else {
-    showToast('This is a private group — you need an invite code.');
+// Re-verify the password EVERY time someone clicks a group — never trust cached
+// localStorage membership, since that storage is shared per-browser, not per-account.
+// This stops anyone using the same device from skipping straight into a group
+// another person previously opened.
+let pendingGroupAccess = null; // {id, name}
+
+function requestGroupAccess(g) {
+  if (!requireLogin('group chats')) return;
+  pendingGroupAccess = g;
+  document.getElementById('gpwd-sub').textContent = `enter the password for "${g.name}"`;
+  document.getElementById('gpwd-input').value = '';
+  document.getElementById('gpwd-err').textContent = '';
+  document.getElementById('modal-group-pwd').classList.add('show');
+  setTimeout(() => document.getElementById('gpwd-input').focus(), 100);
+}
+
+function closeGroupPwdModal() {
+  document.getElementById('modal-group-pwd').classList.remove('show');
+  pendingGroupAccess = null;
+}
+
+async function submitGroupPwd() {
+  if (!pendingGroupAccess) return;
+  const g = pendingGroupAccess;
+  const pwd = document.getElementById('gpwd-input').value.trim();
+  const err = document.getElementById('gpwd-err');
+  if (!pwd) { err.textContent = 'Enter the password.'; return; }
+
+  try {
+    const fresh = await fbGet('groups/' + g.id);
+    if (!fresh) {
+      showToast('This group no longer exists.');
+      myGroups = myGroups.filter(mg => mg.id !== g.id);
+      localStorage.setItem('mygroups', JSON.stringify(myGroups));
+      renderGroups();
+      closeGroupPwdModal();
+      return;
+    }
+    const hash = await simpleHash('group_' + fresh.name.toLowerCase() + pwd);
+    if (hash !== fresh.pwdHash) {
+      err.textContent = 'Incorrect password.';
+      document.getElementById('gpwd-input').classList.add('wrong');
+      setTimeout(() => document.getElementById('gpwd-input').classList.remove('wrong'), 600);
+      return;
+    }
+    closeGroupPwdModal();
+    openGroupChat({id: g.id, name: fresh.name, isPrivate: true, owner: fresh.owner});
+  } catch(e) {
+    err.textContent = 'Failed to verify access.';
   }
 }
 
@@ -2969,6 +3072,7 @@ async function loadGcMsgs() {
 }
 
 async function sendGroupMsg() {
+  if (!requireLogin('group chats')) return;
   const inp = document.getElementById('gc-input');
   const txt = inp.value.trim();
   if (!txt || !activeGroupId) return;
@@ -3045,6 +3149,15 @@ function setTabUnread(tabId, hasUnread) {
 
 // ── MAIN LOGIN / REGISTER ─────────────────────────────────────────────────────
 let loggedIn = false;
+
+// Gate for any social/online feature — solo CPS testing never requires this
+function requireLogin(featureName) {
+  if (loggedIn) return true;
+  showToast(`Create an account (username + password) above to use ${featureName}.`, 'var(--orange)');
+  const pwdBox = document.getElementById('main-pwd-input');
+  if (pwdBox) { pwdBox.style.borderColor = 'var(--orange)'; pwdBox.focus(); setTimeout(()=>pwdBox.style.borderColor='', 1500); }
+  return false;
+}
 
 async function handleMainLogin() {
   const name = nameIn.value.trim();
